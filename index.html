@@ -1,30 +1,104 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detector de Objetos | Portfólio</title>
+    <title>Detetor de Objetos | Portefólio</title>
+    
     <!-- Importando o TensorFlow.js e o modelo COCO-SSD -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    
     <style>
-        body { margin: 0; display: flex; flex-direction: column; align-items: center; background-color: #121212; color: white; font-family: sans-serif; }
-        h1 { margin-top: 20px; font-size: 1.5rem; }
-        #container { position: relative; width: 100%; max-width: 640px; margin-top: 20px; }
+        body { 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background-color: #121212; 
+            color: white; 
+            font-family: sans-serif; 
+            min-height: 100vh;
+        }
+        
+        /* Ecrã de Boas-Vindas */
+        #tela-boas-vindas { 
+            text-align: center; 
+            padding: 40px 20px; 
+            max-width: 600px; 
+            margin-top: 10vh;
+        }
+        #tela-boas-vindas h1 { font-size: 2.2rem; color: #00ffcc; margin-bottom: 20px; }
+        #tela-boas-vindas p { font-size: 1.1rem; line-height: 1.6; margin-bottom: 20px; color: #cccccc; }
+        #tela-boas-vindas strong { color: #ffffff; }
+        
+        .btn-comecar { 
+            background-color: #00ffcc; 
+            color: #121212; 
+            border: none; 
+            padding: 15px 40px; 
+            font-size: 1.2rem; 
+            font-weight: bold; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: background 0.3s;
+            margin-top: 20px;
+        }
+        .btn-comecar:hover { background-color: #00cca3; }
+        
+        /* Ecrã da Aplicação (Oculto inicialmente) */
+        #tela-aplicacao { 
+            display: none; /* Escondido por defeito */
+            width: 100%; 
+            flex-direction: column; 
+            align-items: center; 
+            margin-top: 20px; 
+        }
+        
+        #tela-aplicacao h2 { margin-top: 0; font-size: 1.5rem; text-align: center; }
+        .controles { margin: 15px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; width: 90%; }
+        select { padding: 10px; font-size: 1rem; border-radius: 5px; border: none; width: 100%; max-width: 300px; cursor: pointer; }
+        #container { position: relative; width: 100%; max-width: 640px; }
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; border-radius: 8px; }
         video { z-index: 1; }
         canvas { z-index: 2; }
-        #status { margin-top: 10px; font-weight: bold; color: #00ffcc; }
+        #status { font-weight: bold; color: #00ffcc; text-align: center; }
     </style>
 </head>
 <body>
-    <h1>Detector Visual em Tempo Real</h1>
-    <div id="status">Carregando modelo de IA... aguarde.</div>
-    <div id="container">
-        <!-- O vídeo da câmera -->
-        <video id="webcam" autoplay playsinline muted></video>
-        <!-- O canvas onde os quadrados serão desenhados -->
-        <canvas id="canvas"></canvas>
+
+    <!-- ECRÃ DE BOAS-VINDAS -->
+    <div id="tela-boas-vindas">
+        <h1>Detetor Visual Inteligente</h1>
+        <p>Bem-vindo! Este projeto utiliza <strong>Inteligência Artificial</strong> a correr diretamente no seu navegador, garantindo total privacidade.</p>
+        <p>Desenvolvido com <strong>TensorFlow.js</strong> e o modelo <strong>COCO-SSD</strong>, o sistema é capaz de reconhecer diversos tipos de objetos em tempo real através da sua câmara.</p>
+        <button class="btn-comecar" id="btn-comecar">Começar a Detetar</button>
+    </div>
+
+    <!-- ECRÃ DA APLICAÇÃO (Câmara e IA) -->
+    <div id="tela-aplicacao">
+        <h2>Detetor em Tempo Real</h2>
+        
+        <div class="controles">
+            <div id="status">A aguardar início...</div>
+            <label for="filtro">O que deseja detetar?</label>
+            <select id="filtro">
+                <option value="todos">Detetar Tudo</option>
+                <option value="person">👤 Pessoas</option>
+                <option value="cell phone">📱 Telemóveis</option>
+                <option value="laptop">💻 Portáteis</option>
+                <option value="car">🚗 Carros</option>
+                <option value="dog">🐕 Cães</option>
+                <option value="cat">🐈 Gatos</option>
+                <option value="chair">🪑 Cadeiras</option>
+                <option value="bottle">🍾 Garrafas</option>
+            </select>
+        </div>
+
+        <div id="container">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
+        </div>
     </div>
 
     <script src="script.js"></script>
