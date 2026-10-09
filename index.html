@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detetor de Objetos | Portefólio</title>
+    <title>Detector de Objetos | Portfólio</title>
     
     <!-- Importando o TensorFlow.js e o modelo COCO-SSD -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
@@ -21,7 +21,7 @@
             min-height: 100vh;
         }
         
-        /* Ecrã de Boas-Vindas */
+        /* Tela de Boas-Vindas */
         #tela-boas-vindas { 
             text-align: center; 
             padding: 40px 20px; 
@@ -46,9 +46,9 @@
         }
         .btn-comecar:hover { background-color: #00cca3; }
         
-        /* Ecrã da Aplicação (Oculto inicialmente) */
+        /* Tela da Aplicação (Oculta inicialmente) */
         #tela-aplicacao { 
-            display: none; /* Escondido por defeito */
+            display: none; /* Escondido por padrão */
             width: 100%; 
             flex-direction: column; 
             align-items: center; 
@@ -67,28 +67,28 @@
 </head>
 <body>
 
-    <!-- ECRÃ DE BOAS-VINDAS -->
+    <!-- TELA DE BOAS-VINDAS -->
     <div id="tela-boas-vindas">
-        <h1>Detetor Visual Inteligente</h1>
-        <p>Bem-vindo! Este projeto utiliza <strong>Inteligência Artificial</strong> a correr diretamente no seu navegador, garantindo total privacidade.</p>
-        <p>Desenvolvido com <strong>TensorFlow.js</strong> e o modelo <strong>COCO-SSD</strong>, o sistema é capaz de reconhecer diversos tipos de objetos em tempo real através da sua câmara.</p>
-        <button class="btn-comecar" id="btn-comecar">Começar a Detetar</button>
+        <h1>Detector de Objetos</h1>
+        <p>Bem-vindo! Este projeto foi desenvolvido com o propósito de aprender e explorar mais sobre a <strong>detecção de objetos</strong>, rodando diretamente no seu navegador de forma rápida e segura.</p>
+        <p>Utilizando o <strong>TensorFlow.js</strong> e o modelo <strong>COCO-SSD</strong>, o sistema processa as imagens e é capaz de detectar diversos tipos de elementos em tempo real através da sua câmera.</p>
+        <button class="btn-comecar" id="btn-comecar">Começar a Detectar</button>
     </div>
 
-    <!-- ECRÃ DA APLICAÇÃO (Câmara e IA) -->
+    <!-- TELA DA APLICAÇÃO (Câmera) -->
     <div id="tela-aplicacao">
-        <h2>Detetor em Tempo Real</h2>
+        <h2>Detector em Tempo Real</h2>
         
         <div class="controles">
-            <div id="status">A aguardar início...</div>
-            <label for="filtro">O que deseja detetar?</label>
+            <div id="status">Aguardando início...</div>
+            <label for="filtro">O que deseja detectar?</label>
             <select id="filtro">
-                <option value="todos">Detetar Tudo</option>
+                <option value="todos">Detectar Tudo</option>
                 <option value="person">👤 Pessoas</option>
-                <option value="cell phone">📱 Telemóveis</option>
-                <option value="laptop">💻 Portáteis</option>
+                <option value="cell phone">📱 Celulares</option>
+                <option value="laptop">💻 Notebooks</option>
                 <option value="car">🚗 Carros</option>
-                <option value="dog">🐕 Cães</option>
+                <option value="dog">🐕 Cachorros</option>
                 <option value="cat">🐈 Gatos</option>
                 <option value="chair">🪑 Cadeiras</option>
                 <option value="bottle">🍾 Garrafas</option>

@@ -4,14 +4,14 @@ const ctx = canvas.getContext('2d');
 const statusText = document.getElementById('status');
 const filtroSelect = document.getElementById('filtro');
 
-// Mapear os elementos dos ecrãs
+// Mapeando os elementos das telas
 const telaBoasVindas = document.getElementById('tela-boas-vindas');
 const telaAplicacao = document.getElementById('tela-aplicacao');
 const btnComecar = document.getElementById('btn-comecar');
 
 let model;
 
-// Função para iniciar a câmara
+// Função para iniciar a câmera
 async function setupCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -28,12 +28,12 @@ async function setupCamera() {
             };
         });
     } catch (error) {
-        statusText.innerText = "Erro ao aceder à câmara. Verifique as permissões.";
+        statusText.innerText = "Erro ao acessar a câmera. Verifique as permissões.";
         console.error(error);
     }
 }
 
-// Função principal de deteção
+// Função principal de detecção
 async function detectFrame() {
     const predictions = await model.detect(video);
     
@@ -42,7 +42,7 @@ async function detectFrame() {
     
     const filtroAtual = filtroSelect.value;
     
-    // Desenha os objetos detetados
+    // Desenha os objetos detectados
     predictions.forEach(prediction => {
         if (filtroAtual === 'todos' || prediction.class === filtroAtual) {
             const [x, y, width, height] = prediction.bbox;
@@ -64,23 +64,23 @@ async function detectFrame() {
     requestAnimationFrame(detectFrame);
 }
 
-// Inicialização (Agora só corre ao clicar no botão)
+// Inicialização (Agora só roda ao clicar no botão)
 async function iniciarAplicacao() {
-    // 1. Esconde o ecrã de boas-vindas e mostra a aplicação
+    // 1. Esconde a tela de boas-vindas e mostra a aplicação
     telaBoasVindas.style.display = 'none';
     telaAplicacao.style.display = 'flex';
     
-    // 2. Carrega a IA
-    statusText.innerText = "A carregar o modelo de IA... aguarde.";
+    // 2. Carrega o modelo
+    statusText.innerText = "Carregando as bibliotecas... aguarde.";
     model = await cocoSsd.load();
     
-    // 3. Liga a câmara
-    statusText.innerText = "Modelo carregado! A iniciar a câmara...";
+    // 3. Liga a câmera
+    statusText.innerText = "Modelo carregado! Iniciando a câmera...";
     await setupCamera();
     video.play();
     
-    // 4. Inicia a deteção visual
-    statusText.innerText = "Deteção ativa!";
+    // 4. Inicia a detecção visual
+    statusText.innerText = "Detecção ativa!";
     detectFrame();
 }
 
