@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector de Objetos | Portfólio</title>
+    <!-- Importando o TensorFlow.js e o modelo COCO-SSD -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; background-color: #121212; color: white; font-family: sans-serif; }
+        h1 { margin-top: 20px; font-size: 1.5rem; }
+        #container { position: relative; width: 100%; max-width: 640px; margin-top: 20px; }
+        video, canvas { position: absolute; top: 0; left: 0; width: 100%; border-radius: 8px; }
+        video { z-index: 1; }
+        canvas { z-index: 2; }
+        #status { margin-top: 10px; font-weight: bold; color: #00ffcc; }
+    </style>
+</head>
+<body>
+    <h1>Detector Visual em Tempo Real</h1>
+    <div id="status">Carregando modelo de IA... aguarde.</div>
+    <div id="container">
+        <!-- O vídeo da câmera -->
+        <video id="webcam" autoplay playsinline muted></video>
+        <!-- O canvas onde os quadrados serão desenhados -->
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
