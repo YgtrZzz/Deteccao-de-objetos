@@ -1,0 +1,10 @@
+{
+  "name": "armario-digital",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Armário Digital — Inventário inteligente com IA e câmera fotográfica",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

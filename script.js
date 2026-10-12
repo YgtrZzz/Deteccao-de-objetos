@@ -370,29 +370,43 @@ const Camera = (() => {
 })();
 
 /* ==========================================================
-   4. IA — análise da imagem (SIMULADA)
+   4. IA — análise da imagem (POST /api/analyze)
    ----------------------------------------------------------
-   Substituir o corpo desta função pela chamada real à API
-   (ex.: fetch para um backend que use um modelo de visão).
-   A assinatura (base64 -> Promise<string>) deve ser mantida.
+   Envia a imagem base64 capturada para a Serverless Function
+   na Vercel, que se conecta com a API do Google Gemini.
    ========================================================== */
-const ITENS_DE_TESTE = [
-    'Livro Vermelho', 'Caneca Azul', 'Caderno', 'Fone de Ouvido', 'Carregador de Celular',
-    'Óculos de Sol', 'Garrafa Térmica', 'Controle Remoto', 'Tesoura', 'Caixa de Ferramentas',
-];
-const ATRASO_SIMULADO_MS = 2000;
 
 /**
- * Analisa uma imagem e retorna uma descrição do objeto.
+ * Analisa uma imagem enviando-a para o endpoint /api/analyze.
  * @param {string} base64  Data URL da imagem (data:image/jpeg;base64,...)
- * @returns {Promise<string>}
+ * @returns {Promise<string>} Nome do objeto identificado
  */
 async function analisarImagem(base64) {
     if (typeof base64 !== 'string' || !base64.startsWith('data:image/')) {
         throw new Error('Imagem inválida para análise.');
     }
-    await new Promise((resolve) => setTimeout(resolve, ATRASO_SIMULADO_MS));
-    return ITENS_DE_TESTE[Math.floor(Math.random() * ITENS_DE_TESTE.length)];
+
+    const resposta = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image: base64 }),
+    });
+
+    const dados = await resposta.json().catch(() => null);
+
+    if (!resposta.ok) {
+        const mensagem = dados?.error || `Falha na análise (${resposta.status})`;
+        throw new Error(mensagem);
+    }
+
+    const nome = dados?.objeto || dados?.nome;
+    if (!nome) {
+        throw new Error('A IA não retornou um nome válido para o objeto.');
+    }
+
+    return nome;
 }
 
 /* ==========================================================
