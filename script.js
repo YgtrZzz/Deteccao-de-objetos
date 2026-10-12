@@ -386,27 +386,42 @@ async function analisarImagem(base64) {
         throw new Error('Imagem inválida para análise.');
     }
 
-    const resposta = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ image: base64 }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, 8000);
 
-    const dados = await resposta.json().catch(() => null);
+    try {
+        const resposta = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: base64 }),
+            signal: controller.signal,
+        });
 
-    if (!resposta.ok) {
-        const mensagem = dados?.error || `Falha na análise (${resposta.status})`;
-        throw new Error(mensagem);
+        const dados = await resposta.json().catch(() => null);
+
+        if (!resposta.ok) {
+            const mensagem = dados?.error || `Falha na análise (${resposta.status})`;
+            throw new Error(mensagem);
+        }
+
+        const nome = dados?.objeto || dados?.nome;
+        if (!nome) {
+            throw new Error('A IA não retornou um nome válido para o objeto.');
+        }
+
+        return nome;
+    } catch (erro) {
+        if (erro.name === 'AbortError') {
+            throw new Error('Tempo limite excedido (8s). O servidor demorou para responder.');
+        }
+        throw erro;
+    } finally {
+        clearTimeout(timeoutId);
     }
-
-    const nome = dados?.objeto || dados?.nome;
-    if (!nome) {
-        throw new Error('A IA não retornou um nome válido para o objeto.');
-    }
-
-    return nome;
 }
 
 /* ==========================================================
@@ -673,24 +688,20 @@ const UI = (() => {
     async function aoCapturar() {
         if (scanner.estado !== 'ao-vivo') return;
 
-        let base64;
-        try {
-            base64 = Camera.capturarFrame(el.video, el.canvas);
-            scanner.miniatura = Camera.gerarMiniatura(el.canvas);
-        } catch (erro) {
-            toast(`⚠️ ${erro.message}`);
-            return;
-        }
-
-        // Congela: mostra a foto capturada por cima e pausa o vídeo
-        el.foto.src = base64;
-        el.video.pause();
-        definirEstadoScanner('analisando');
-
         const meuToken = ++scanner.tokenAnalise;
+
         try {
+            const base64 = Camera.capturarFrame(el.video, el.canvas);
+            scanner.miniatura = Camera.gerarMiniatura(el.canvas);
+
+            // Congela: mostra a foto capturada por cima e pausa o vídeo
+            el.foto.src = base64;
+            el.video.pause();
+            definirEstadoScanner('analisando');
+
             const descricao = await analisarImagem(base64);
             if (meuToken !== scanner.tokenAnalise) return; // análise cancelada (usuário clicou em "Tirar outra")
+
             el.inputItem.value = descricao;
             definirEstadoScanner('resultado');
             el.inputItem.focus();
@@ -698,7 +709,18 @@ const UI = (() => {
         } catch (erro) {
             if (meuToken !== scanner.tokenAnalise) return;
             toast(`⚠️ Falha na análise: ${erro.message}`);
-            await aoRefazer();
+
+            // Em caso de falha ou timeout, restaura a exibição da câmera ao vivo
+            el.foto.removeAttribute('src');
+            definirEstadoScanner('ao-vivo');
+            if (Camera.estaLigada()) {
+                el.video.play().catch(() => {});
+            }
+        } finally {
+            // Obrigatoriamente remove o aviso de 'Analisando imagem...' e libera o botão,
+            // não importando o resultado (sucesso, falha ou timeout)
+            el.analisando.hidden = true;
+            el.btnCapturar.disabled = false;
         }
     }
 
