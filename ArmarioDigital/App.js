@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
@@ -9,12 +9,160 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as tf from '@tensorflow/tfjs';
+import { decodeJpeg, fetch as tfFetch } from '@tensorflow/tfjs-react-native';
+import * as mobilenet from '@tensorflow-models/mobilenet';
 import { initDatabase, insertItem, getItems } from './database';
+
+/**
+ * Dicionário simples para traduzir as categorias mais comuns do MobileNet (ImageNet)
+ * do inglês para o português.
+ */
+const TRADUCOES_MOBILENET = {
+  laptop: 'Notebook',
+  'notebook computer': 'Notebook',
+  notebook: 'Notebook',
+  'desktop computer': 'Computador de Mesa',
+  monitor: 'Monitor',
+  screen: 'Monitor / Tela',
+  'computer keyboard': 'Teclado',
+  keypad: 'Teclado',
+  mouse: 'Mouse',
+  'computer mouse': 'Mouse',
+  'cellular telephone': 'Celular',
+  'cellular phone': 'Celular',
+  cellphone: 'Celular',
+  'mobile phone': 'Celular',
+  ipod: 'Celular / Reprodutor',
+  'remote control': 'Controle Remoto',
+  remote: 'Controle Remoto',
+  television: 'Televisão',
+  chair: 'Cadeira',
+  'folding chair': 'Cadeira Dobrável',
+  'rocking chair': 'Cadeira de Balanço',
+  'barber chair': 'Cadeira',
+  desk: 'Escrivaninha / Mesa',
+  'dining table': 'Mesa de Jantar',
+  bookcase: 'Estante de Livros',
+  wardrobe: 'Guarda-Roupa',
+  bottle: 'Garrafa',
+  'water bottle': 'Garrafa de Água',
+  'pop bottle': 'Garrafa de Refrigerante',
+  'wine bottle': 'Garrafa de Vinho',
+  'beer bottle': 'Garrafa',
+  'pill bottle': 'Frasco de Remédio',
+  'coffee mug': 'Caneca',
+  mug: 'Caneca',
+  cup: 'Xícara / Copo',
+  espresso: 'Xícara de Café',
+  'water jug': 'Jarra de Água',
+  teapot: 'Bule',
+  plate: 'Prato',
+  bowl: 'Tigela',
+  backpack: 'Mochila',
+  handbag: 'Bolsa',
+  purse: 'Bolsa',
+  wallet: 'Carteira',
+  umbrella: 'Guarda-Chuva',
+  sunglasses: 'Óculos de Sol',
+  eyeglasses: 'Óculos',
+  watch: 'Relógio',
+  'digital watch': 'Relógio Digital',
+  'wall clock': 'Relógio de Parede',
+  'analog clock': 'Relógio Analógico',
+  'running shoe': 'Tênis',
+  shoe: 'Calçado',
+  sandal: 'Sandália',
+  boot: 'Bota',
+  jean: 'Calça Jeans',
+  't-shirt': 'Camiseta',
+  jersey: 'Camisa',
+  sweatshirt: 'Moletom',
+  suit: 'Terno',
+  coat: 'Casaco',
+  pillow: 'Travesseiro / Almofada',
+  'book jacket': 'Livro',
+  'comic book': 'Livro / Quadrinho',
+  binder: 'Caderno / Fichário',
+  envelope: 'Envelope',
+  ballpoint: 'Caneta',
+  'fountain pen': 'Caneta',
+  'pencil box': 'Estojo',
+  'rubber eraser': 'Borracha',
+  ruler: 'Régua',
+  scissors: 'Tesoura',
+  screwdriver: 'Chave de Fenda',
+  hammer: 'Martelo',
+  padlock: 'Cadeado',
+  flashlight: 'Lanterna',
+  'table lamp': 'Luminária de Mesa',
+  lampshade: 'Abajur',
+  'electric fan': 'Ventilador',
+  iron: 'Ferro de Passar',
+  vacuum: 'Aspirador de Pó',
+  toaster: 'Torradeira',
+  microwave: 'Micro-ondas',
+  refrigerator: 'Geladeira',
+  headphone: 'Fone de Ouvido',
+  earphone: 'Fone de Ouvido',
+  loudspeaker: 'Caixa de Som',
+  microphone: 'Microfone',
+  'acoustic guitar': 'Violão',
+  'electric guitar': 'Guitarra',
+  vase: 'Vaso',
+  flowerpot: 'Vaso de Planta',
+  perfume: 'Perfume',
+  lotion: 'Loção / Creme',
+  'soap dispenser': 'Saboneteira',
+  'paper towel': 'Papel Toalha',
+  'bath towel': 'Toalha de Banho',
+  banana: 'Banana',
+  orange: 'Laranja',
+  apple: 'Maçã',
+};
+
+/**
+ * Traduz a classe retornada pelo MobileNet (ex: "laptop, laptop computer")
+ * para o português ou mantém o nome original caso não haja tradução.
+ * @param {string} rawClassName
+ * @returns {string}
+ */
+function traduzirCategoria(rawClassName) {
+  if (!rawClassName) return 'Objeto Identificado';
+
+  const termos = rawClassName
+    .toLowerCase()
+    .split(',')
+    .map((termo) => termo.trim());
+
+  // 1. Busca correspondência exata em qualquer um dos sinônimos retornados pelo MobileNet
+  for (const termo of termos) {
+    if (TRADUCOES_MOBILENET[termo]) {
+      return TRADUCOES_MOBILENET[termo];
+    }
+  }
+
+  // 2. Busca por palavra-chave contida no nome da classe
+  const textoCompleto = rawClassName.toLowerCase();
+  for (const [chaveIngles, valorPortugues] of Object.entries(TRADUCOES_MOBILENET)) {
+    if (textoCompleto.includes(chaveIngles)) {
+      return valorPortugues;
+    }
+  }
+
+  // 3. Se não houver tradução no dicionário, mantém o primeiro termo original capitalizado
+  const original = rawClassName.split(',')[0].trim();
+  return original.charAt(0).toUpperCase() + original.slice(1);
+}
 
 export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
   const [items, setItems] = useState([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [model, setModel] = useState(null);
+  const [isModelReady, setIsModelReady] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+
+  const cameraRef = useRef(null);
 
   // Recarrega todos os itens do SQLite
   const loadInventory = useCallback(async () => {
@@ -26,30 +174,104 @@ export default function App() {
     }
   }, []);
 
-  // 1. Inicializa o banco assim que o app abre e carrega os itens existentes
+  // Inicializa o SQLite e carrega o TensorFlow.js + MobileNet em background
   useEffect(() => {
-    async function setupDatabase() {
+    let isMounted = true;
+
+    async function initializeApp() {
+      // 1. Inicializa o banco de dados local SQLite
       try {
         await initDatabase();
         await loadInventory();
-      } catch (error) {
-        console.error('Falha ao inicializar banco de dados:', error);
+      } catch (dbError) {
+        console.error('Falha ao inicializar banco de dados:', dbError);
+      }
+
+      // 2. Inicializa o TensorFlow.js e carrega o modelo MobileNet em background
+      try {
+        await tf.ready();
+        const loadedModel = await mobilenet.load();
+        if (isMounted) {
+          setModel(loadedModel);
+          setIsModelReady(true);
+        }
+      } catch (tfError) {
+        console.error('Falha ao carregar TensorFlow/MobileNet:', tfError);
       }
     }
-    setupDatabase();
+
+    initializeApp();
+
+    return () => {
+      isMounted = false;
+    };
   }, [loadInventory]);
 
-  // 2. Insere 'Objeto Escaneado' no SQLite e atualiza a FlatList em tempo real
+  // Captura a foto na CameraView, classifica no MobileNet, traduz e salva no SQLite
   const handleScanItem = async () => {
-    if (isSaving) return;
-    setIsSaving(true);
+    if (isScanning) return;
+
+    if (!isModelReady || !model) {
+      alert('Aguarde um instante: o modelo de IA ainda está sendo carregado.');
+      return;
+    }
+
+    if (!cameraRef.current) {
+      alert('A câmera ainda não está pronta.');
+      return;
+    }
+
+    setIsScanning(true);
+    let imageTensor = null;
+
     try {
-      await insertItem('Objeto Escaneado');
+      // 1. Captura a foto em formato JPEG com base64
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        base64: true,
+        skipProcessing: true,
+      });
+
+      // 2. Converte os bytes JPEG para um Tensor 3D compatível com o MobileNet
+      let rawImageData;
+      if (photo?.base64) {
+        rawImageData = tf.util.encodeString(photo.base64, 'base64');
+      } else if (photo?.uri) {
+        const response = await tfFetch(photo.uri, {}, { isBinary: true });
+        const arrayBuffer = await response.arrayBuffer();
+        rawImageData = new Uint8Array(arrayBuffer);
+      } else {
+        throw new Error('Não foi possível obter os dados da imagem capturada.');
+      }
+
+      imageTensor = decodeJpeg(rawImageData);
+
+      // 3. Classifica a imagem no MobileNet
+      const predictions = await model.classify(imageTensor);
+
+      if (!predictions || predictions.length === 0) {
+        throw new Error('Nenhuma predição retornada pelo modelo.');
+      }
+
+      // 4. Seleciona a predição de maior probabilidade e traduz para português
+      const topPrediction = [...predictions].sort(
+        (a, b) => b.probability - a.probability
+      )[0];
+
+      const nomeTraduzido = traduzirCategoria(topPrediction.className);
+
+      // 5. Insere o nome real no SQLite e atualiza a FlatList imediatamente
+      await insertItem(nomeTraduzido);
       await loadInventory();
     } catch (error) {
-      alert('Não foi possível salvar o item no banco de dados.');
+      console.error('Erro ao escanear e classificar item:', error);
+      alert('Não foi possível identificar o objeto. Tente aproximar a câmera.');
     } finally {
-      setIsSaving(false);
+      // Libera a memória do tensor na GPU/CPU
+      if (imageTensor) {
+        tf.dispose(imageTensor);
+      }
+      setIsScanning(false);
     }
   };
 
@@ -103,24 +325,39 @@ export default function App() {
     );
   }
 
-  // Tela dividida: metade superior (Câmera) + metade inferior (FlatList do Inventário)
+  // Tela dividida: metade superior (Câmera + IA) + metade inferior (FlatList do Inventário)
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* METADE SUPERIOR: Câmera + Botão Sobreposto */}
+      {/* METADE SUPERIOR: Câmera + Aviso da IA + Botão Sobreposto */}
       <View style={styles.topHalf}>
-        <CameraView style={styles.camera} facing="back" />
+        <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+
+        {/* Aviso 'Carregando IA...' visível até que o modelo MobileNet esteja 100% pronto */}
+        {!isModelReady && (
+          <View style={styles.aiStatusBadge}>
+            <ActivityIndicator size="small" color="#00ffcc" />
+            <Text style={styles.aiStatusText}>Carregando IA...</Text>
+          </View>
+        )}
 
         <View style={styles.cameraOverlay}>
           <TouchableOpacity
-            style={[styles.scanButton, isSaving && styles.scanButtonDisabled]}
+            style={[
+              styles.scanButton,
+              (!isModelReady || isScanning) && styles.scanButtonDisabled,
+            ]}
             activeOpacity={0.85}
             onPress={handleScanItem}
-            disabled={isSaving}
+            disabled={!isModelReady || isScanning}
           >
             <Text style={styles.scanButtonText}>
-              {isSaving ? 'Salvando...' : 'Escanear Item'}
+              {isScanning
+                ? 'Analisando objeto...'
+                : !isModelReady
+                  ? 'Aguardando IA...'
+                  : 'Escanear Item'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -161,7 +398,7 @@ export default function App() {
               <Text style={styles.emptyIcon}>📭</Text>
               <Text style={styles.emptyText}>Nenhum item no inventário.</Text>
               <Text style={styles.emptySubtext}>
-                Toque em "Escanear Item" acima para registrar o primeiro objeto.
+                Aponte a câmera para um objeto e toque em "Escanear Item".
               </Text>
             </View>
           }
@@ -184,6 +421,25 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
+  },
+  aiStatusBadge: {
+    position: 'absolute',
+    top: 48,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(18, 18, 18, 0.88)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#00ffcc',
+  },
+  aiStatusText: {
+    color: '#00ffcc',
+    fontSize: 13,
+    fontWeight: '700',
   },
   cameraOverlay: {
     position: 'absolute',
@@ -210,6 +466,7 @@ const styles = StyleSheet.create({
   },
   scanButtonDisabled: {
     opacity: 0.6,
+    borderColor: '#555555',
   },
   scanButtonText: {
     color: '#ffffff',
